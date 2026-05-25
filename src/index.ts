@@ -20,12 +20,13 @@ import {
   expandHome,
   loadSshConfigHostAliases,
 } from "./paths.js";
+import { audit } from "./audit.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Server } from "./schema.js";
 
 const PKG_NAME = "server-inventory-mcp";
-const PKG_VERSION = "0.2.0";
+const PKG_VERSION = "0.3.0";
 
 const secrets = defaultSecretsStore();
 
@@ -265,15 +266,26 @@ async function main() {
     },
     async (args) =>
       withInventoryLock(async () => {
-        const store = await InventoryStore.open();
-        const created = store.add({
-          ...args,
-          groups: args.groups ?? [],
-          tags: args.tags ?? [],
-        } as Server);
-        await store.save();
-        const secretKeys = await secrets.list(created.name).catch(() => []);
-        return jsonText({ added: detail(created, secretKeys) });
+        try {
+          const store = await InventoryStore.open();
+          const created = store.add({
+            ...args,
+            groups: args.groups ?? [],
+            tags: args.tags ?? [],
+          } as Server);
+          await store.save();
+          const secretKeys = await secrets.list(created.name).catch(() => []);
+          await audit({ tool: "add_server", server: created.name, ok: true });
+          return jsonText({ added: detail(created, secretKeys) });
+        } catch (err) {
+          await audit({
+            tool: "add_server",
+            server: args.name,
+            ok: false,
+            error: (err as Error).message,
+          });
+          throw err;
+        }
       }),
   );
 
@@ -304,27 +316,44 @@ async function main() {
     async (args) =>
       withInventoryLock(async () => {
         const { name, rename_to, ...rest } = args;
-        const store = await InventoryStore.open();
-        const patch: Partial<Server> = { ...rest };
-        if (rename_to !== undefined) patch.name = rename_to;
-        const updated = store.update(name, patch);
-        await store.save();
-        // If renamed, migrate any associated secrets to the new name so
-        // they don't orphan.
-        if (rename_to && rename_to !== name) {
-          await withSecretsLock(async () => {
-            const keys = await secrets.list(name);
-            for (const k of keys) {
-              const v = await secrets.get(name, k);
-              if (v !== null) {
-                await secrets.set(rename_to, k, v);
-                await secrets.delete(name, k);
+        try {
+          const store = await InventoryStore.open();
+          const patch: Partial<Server> = { ...rest };
+          if (rename_to !== undefined) patch.name = rename_to;
+          const updated = store.update(name, patch);
+          await store.save();
+          // If renamed, migrate any associated secrets to the new name so
+          // they don't orphan.
+          if (rename_to && rename_to !== name) {
+            await withSecretsLock(async () => {
+              const keys = await secrets.list(name);
+              for (const k of keys) {
+                const v = await secrets.get(name, k);
+                if (v !== null) {
+                  await secrets.set(rename_to, k, v);
+                  await secrets.delete(name, k);
+                }
               }
-            }
+            });
+          }
+          const secretKeys = await secrets.list(updated.name).catch(() => []);
+          await audit({
+            tool: "update_server",
+            server: name,
+            rename_to: rename_to,
+            ok: true,
           });
+          return jsonText({ updated: detail(updated, secretKeys) });
+        } catch (err) {
+          await audit({
+            tool: "update_server",
+            server: name,
+            rename_to: rename_to,
+            ok: false,
+            error: (err as Error).message,
+          });
+          throw err;
         }
-        const secretKeys = await secrets.list(updated.name).catch(() => []);
-        return jsonText({ updated: detail(updated, secretKeys) });
       }),
   );
 
@@ -340,17 +369,33 @@ async function main() {
     },
     async ({ name }) =>
       withInventoryLock(async () => {
-        const store = await InventoryStore.open();
-        const removed = store.remove(name);
-        await store.save();
-        // Cascade: drop any secrets associated with this server.
-        const removedSecrets = await withSecretsLock(() =>
-          secrets.deleteServer(name).catch(() => 0),
-        );
-        return jsonText({
-          removed: removed.name,
-          removed_secret_count: removedSecrets,
-        });
+        try {
+          const store = await InventoryStore.open();
+          const removed = store.remove(name);
+          await store.save();
+          // Cascade: drop any secrets associated with this server.
+          const removedSecrets = await withSecretsLock(() =>
+            secrets.deleteServer(name).catch(() => 0),
+          );
+          await audit({
+            tool: "remove_server",
+            server: name,
+            ok: true,
+            extra: { removed_secret_count: removedSecrets },
+          });
+          return jsonText({
+            removed: removed.name,
+            removed_secret_count: removedSecrets,
+          });
+        } catch (err) {
+          await audit({
+            tool: "remove_server",
+            server: name,
+            ok: false,
+            error: (err as Error).message,
+          });
+          throw err;
+        }
       }),
   );
 
@@ -516,13 +561,25 @@ async function main() {
     },
     async ({ server: srv, key, value }) =>
       withSecretsLock(async () => {
-        await secrets.set(srv, key, value);
-        return jsonText({
-          server: srv,
-          key,
-          stored: true,
-          value_length: value.length,
-        });
+        try {
+          await secrets.set(srv, key, value);
+          await audit({ tool: "set_secret", server: srv, key, ok: true });
+          return jsonText({
+            server: srv,
+            key,
+            stored: true,
+            value_length: value.length,
+          });
+        } catch (err) {
+          await audit({
+            tool: "set_secret",
+            server: srv,
+            key,
+            ok: false,
+            error: (err as Error).message,
+          });
+          throw err;
+        }
       }),
   );
 
@@ -599,8 +656,45 @@ async function main() {
     async ({ server: srv, key }) =>
       withSecretsLock(async () => {
         const removed = await secrets.delete(srv, key);
+        await audit({ tool: "delete_secret", server: srv, key, ok: true, extra: { removed } });
         return jsonText({ server: srv, key, removed });
       }),
+  );
+
+  // ---------- audit_tail ----------
+  server.registerTool(
+    "audit_tail",
+    {
+      title: "Read the tail of the audit log",
+      description:
+        "Return the last N entries (default 50, max 1000) of the append-only audit log. Each entry is one JSON line recording: timestamp, tool name, server, key (no values), ok, and any error message. Use this to answer 'what did the agent change recently?' without parsing the file yourself.",
+      inputSchema: {
+        limit: z.number().int().positive().max(1000).optional(),
+      },
+    },
+    async ({ limit }) => {
+      const cap = limit ?? 50;
+      const filePath = resolveAuditLogPath();
+      let raw: string;
+      try {
+        raw = await fs.readFile(filePath, "utf8");
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          return jsonText({ path: filePath, entries: [], note: "audit log does not exist yet" });
+        }
+        throw err;
+      }
+      const lines = raw.split("\n").filter((l) => l.trim().length > 0);
+      const slice = lines.slice(-cap);
+      const entries = slice.map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return { raw: l };
+        }
+      });
+      return jsonText({ path: filePath, total_lines: lines.length, entries });
+    },
   );
 
   const transport = new StdioServerTransport();

@@ -24,15 +24,21 @@ const secretsPath = path.join(
   os.tmpdir(),
   `server-inventory-smoke-${process.pid}.enc`,
 );
+const auditPath = path.join(
+  os.tmpdir(),
+  `server-inventory-smoke-${process.pid}.audit.log`,
+);
 
 await fs.rm(inventoryPath, { force: true });
 await fs.rm(secretsPath, { force: true });
+await fs.rm(auditPath, { force: true });
 
 const child = spawn("node", [entry], {
   env: {
     ...process.env,
     SERVER_INVENTORY_PATH: inventoryPath,
     SERVER_INVENTORY_SECRETS_PATH: secretsPath,
+    SERVER_INVENTORY_AUDIT_LOG: auditPath,
     // Force the env-passphrase backend so the smoke test never touches
     // the real Keychain on developer machines.
     SERVER_INVENTORY_PASSPHRASE: "smoke-test-passphrase-" + process.pid,
@@ -104,8 +110,8 @@ try {
 
   const tools = await rpc("tools/list", {});
   assert(
-    tools.result.tools.length >= 17,
-    `tools/list returns at least 17 tools (got ${tools.result.tools.length})`,
+    tools.result.tools.length >= 18,
+    `tools/list returns at least 18 tools (got ${tools.result.tools.length})`,
   );
 
   const info0 = await call("inventory_info", {});
@@ -283,6 +289,27 @@ try {
   assert(!!badEntry, "validate_inventory flags missing identity_file as error");
   await call("remove_server", { name: "bad-key-server" });
 
+  // ---------- audit log ----------
+  const tail = await call("audit_tail", { limit: 200 });
+  assert(tail.entries.length > 0, "audit_tail returns recorded entries");
+  assert(
+    tail.entries.some((e) => e.tool === "add_server" && e.server === "lp-web-1"),
+    "audit log records add_server for lp-web-1",
+  );
+  assert(
+    tail.entries.some((e) => e.tool === "set_secret" && e.key === "password"),
+    "audit log records set_secret (key only, no value)",
+  );
+  assert(
+    tail.entries.some((e) => e.tool === "remove_server" && e.ok === true),
+    "audit log records successful remove_server",
+  );
+  // The file itself must contain no secret values
+  const auditRaw = await fs.readFile(auditPath, "utf8");
+  assert(!auditRaw.includes("hunter2"), "audit log does not contain secret values");
+  assert(!auditRaw.includes("rootbeer"), "audit log does not contain sudo passwords");
+  assert(!auditRaw.includes("abc-123"), "audit log does not contain api tokens");
+
   console.log("\nAll smoke checks passed.");
 } catch (err) {
   console.error("Smoke test failed:", err.message);
@@ -292,4 +319,5 @@ try {
   await once(child, "exit").catch(() => {});
   await fs.rm(inventoryPath, { force: true });
   await fs.rm(secretsPath, { force: true });
+  await fs.rm(auditPath, { force: true });
 }
