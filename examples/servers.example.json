@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "servers": [
+    {
+      "name": "lp-web-1",
+      "ssh_alias": "lp-web-1",
+      "groups": ["logicplanes", "production"],
+      "tags": ["web", "nginx", "tls"],
+      "environment": "production",
+      "role": "web",
+      "description": "Primary public web frontend"
+    },
+    {
+      "name": "lp-web-2",
+      "ssh_alias": "lp-web-2",
+      "groups": ["logicplanes", "production"],
+      "tags": ["web", "nginx", "tls"],
+      "environment": "production",
+      "role": "web",
+      "description": "Secondary public web frontend"
+    },
+    {
+      "name": "lp-db-1",
+      "host": "10.0.0.10",
+      "user": "ops",
+      "port": 22,
+      "identity_file": "~/.ssh/lp_db_key",
+      "groups": ["logicplanes", "production"],
+      "tags": ["db", "postgres"],
+      "environment": "production",
+      "role": "db",
+      "description": "Primary Postgres replica leader"
+    },
+    {
+      "name": "lp-staging-1",
+      "ssh_alias": "lp-staging-1",
+      "groups": ["logicplanes", "staging"],
+      "tags": ["web", "nginx"],
+      "environment": "staging",
+      "role": "web",
+      "description": "Staging environment, mirrors production"
+    },
+    {
+      "name": "lp-bastion",
+      "host": "bastion.example.com",
+      "user": "ops",
+      "groups": ["logicplanes", "infra"],
+      "tags": ["bastion", "jumphost"],
+      "environment": "production",
+      "role": "bastion",
+      "description": "Public jump host for the logicplanes VPC"
+    },
+    {
+      "name": "lp-app-1",
+      "host": "10.0.1.20",
+      "user": "deploy",
+      "jump_host": "ops@bastion.example.com",
+      "groups": ["logicplanes", "production"],
+      "tags": ["app", "node"],
+      "environment": "production",
+      "role": "app",
+      "description": "Private app server, reached via the bastion"
+    }
+  ]
+}
