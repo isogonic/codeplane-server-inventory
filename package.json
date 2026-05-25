@@ -1,0 +1,27 @@
+{
+  "name": "server-inventory-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that keeps an inventory of SSH-reachable servers (grouped + tagged) so an agent can answer 'audit all <group> servers' by looking up where to connect.",
+  "type": "module",
+  "bin": {
+    "server-inventory-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
