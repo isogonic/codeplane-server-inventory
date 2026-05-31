@@ -19,7 +19,6 @@ jobs:
           registry-url: https://registry.npmjs.org/
           token: ${{ secrets.NPM_TOKEN }}
           cache: npm
-          registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm run build
       - run: npm publish --provenance --access public
