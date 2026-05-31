@@ -118,6 +118,7 @@ The publish workflow does **not** require the repo to be public. It uses the man
 
 | Version | Date | Notes |
 |---------|------|-------|
+| `0.5.4` | 2026-05-31 | CI operationalization: changelog gate, TEAM_PAT support, docs expansion. |
 | `0.5.3` | 2026-05-31 | README rewrite in Codeplane style; package renamed to `@isogonic/codeplane-server-inventory`; npm publish workflow added. |
 | `0.5.2` | 2026-05-30 | CI cleanup; correct publish directory; optimize npm workflow. |
 | `0.5.1` | 2026-05-29 | npm publish fixes; migrate to local git config; unpin @types/node. |

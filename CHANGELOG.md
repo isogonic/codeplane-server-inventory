@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.4] - 2026-05-31
+### Added
+- Automated changelog verification in publish workflow
+- Branch protection configuration in `.github/settings.yml`
+- Security policy, contributing guide, testing strategy, and interactions docs
+
+### Changed
+- Updated CI workflows to support optional `TEAM_PAT` credentials
+- All 100 unit tests plus smoke tests pass
+
 ## [0.5.3] - 2026-05-31
 
 ### Added

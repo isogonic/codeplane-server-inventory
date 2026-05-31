@@ -1,6 +1,6 @@
 {
   "name": "@isogonic/codeplane-server-inventory",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Codeplane MCP server for SSH server inventory with encrypted secrets. Lets Codeplane agents answer 'audit all <group> servers' without manual credential input.",
   "type": "module",
   "bin": {
