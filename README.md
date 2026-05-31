@@ -10,7 +10,8 @@
     <a href="https://codeplane.cc"><strong>Website</strong></a> &nbsp;·&nbsp;
     <a href="https://codeplane.cc/docs/mcp/"><strong>MCP docs</strong></a> &nbsp;·&nbsp;
     <a href="https://github.com/isogonic/codeplane-server-inventory/issues">Issues</a> &nbsp;·&nbsp;
-    <a href="https://npmjs.com/package/@isogonic/codeplane-server-inventory">npm</a>
+    <a href="https://npmjs.com/package/@isogonic/codeplane-server-inventory">npm</a> &nbsp;·&nbsp;
+    <a href="docs/Versioning.md"><strong>Versioning</strong></a>
   </p>
 </div>
 
