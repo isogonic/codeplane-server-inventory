@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.5] - 2026-05-31
+### Added
+- Cross-platform support documented for macOS, Linux, and Windows
+- Codeplane UI setup instructions in README
+
+### Changed
+- **CLI removed entirely** — this is now a pure MCP server
+- Publish workflow triggers on GitHub release only (not on push to main)
+- LICENSE updated to "Isogonic (Devin Oldenburg)" with link to devinoldenburg.com
+- Removed all `server-inv` binary references
+
 ## [0.5.4] - 2026-05-31
 ### Added
 - Automated changelog verification in publish workflow
