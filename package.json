@@ -1,5 +1,5 @@
 {
-  "name": "server-inventory-mcp",
+  "name": "@isogonic/codeplane-server-inventory",
   "version": "0.5.0",
   "description": "MCP server that keeps an inventory of SSH-reachable servers (grouped + tagged) so an agent can answer 'audit all <group> servers' by looking up where to connect.",
   "type": "module",
@@ -8,6 +8,23 @@
     "server-inv": "dist/cli.js"
   },
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isogonic/codeplane-server-inventory.git",
+    "directory": "."
+  },
+  "homepage": "https://github.com/isogonic/codeplane-server-inventory#readme",
+  "bugs": {
+    "url": "https://github.com/isogonic/codeplane-server-inventory/issues"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/index.js dist/cli.js",
     "start": "node dist/index.js",
@@ -27,5 +44,13 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "server-inventory",
+    "ssh",
+    "devops"
+  ],
+  "license": "MIT"
 }
