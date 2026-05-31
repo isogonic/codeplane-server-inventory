@@ -1,7 +1,7 @@
 {
   "name": "@isogonic/codeplane-server-inventory",
   "version": "0.5.0",
-  "description": "MCP server that keeps an inventory of SSH-reachable servers (grouped + tagged) so an agent can answer 'audit all <group> servers' by looking up where to connect.",
+  "description": "Codeplane MCP server for SSH server inventory with encrypted secrets. Lets Codeplane agents answer 'audit all <group> servers' without manual credential input.",
   "type": "module",
   "bin": {
     "server-inventory-mcp": "dist/index.js",
@@ -46,6 +46,7 @@
     "node": ">=20"
   },
   "keywords": [
+    "codeplane",
     "mcp",
     "model-context-protocol",
     "server-inventory",
