@@ -16,9 +16,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org/
-          token: ${{ secrets.NPM_TOKEN }}
           cache: npm
+      - run: npm config set registry https://registry.npmjs.org/
+      - run: npm config set //registry.npmjs.org/:_authToken '${{ secrets.NPM_TOKEN }}'
       - run: npm whoami
       - run: npm ci
       - run: npm run build
