@@ -1,0 +1,34 @@
+# Repository Settings
+
+This file documents the desired repository configuration for
+`isogonic/codeplane-server-inventory`.
+
+Most settings below require a GitHub PAT with `repo` and `admin:repo_hook`
+scopes. Store it as the `TEAM_PAT` secret and use a workflow to apply them.
+
+## Branch Protection
+
+Target branch: `main`
+
+- **Required status checks**: `ci` must pass
+- **Strict status checks**: yes (up-to-date branch required)
+- **Required approving reviews**: 1
+- **Dismiss stale reviews**: yes
+- **Allow force pushes**: no
+- **Allow deletions**: no
+- **Enforce admins**: no (admins may bypass for emergency hotfixes)
+
+## Recommended Labels
+
+| Name | Color | Description |
+|------|-------|-------------|
+| `bug` | `#d73a4a` | Something isn't working |
+| `enhancement` | `#a2eeef` | New feature or request |
+| `documentation` | `#0075ca` | Improvements to docs |
+| `security` | `#b60205` | Security-related issues |
+
+## Merge Strategy
+
+- `main` branch only accepts merges via pull request.
+- Squash merging is preferred to keep history linear.
+- The publish workflow runs automatically after merge to `main`.

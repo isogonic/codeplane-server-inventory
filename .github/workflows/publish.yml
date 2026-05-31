@@ -13,6 +13,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TEAM_PAT || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -21,4 +23,11 @@ jobs:
       - run: npm config set //registry.npmjs.org/:_authToken '${{ secrets.NPM_TOKEN }}'
       - run: npm ci
       - run: npm run build
+      - name: Verify changelog entry
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ ! -f CHANGELOG.md ] || ! grep -q "## \[${VERSION}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md is missing an entry for version ${VERSION}"
+            exit 1
+          fi
       - run: npm publish --access public

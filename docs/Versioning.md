@@ -119,9 +119,31 @@ The publish workflow does **not** require the repo to be public. It uses the man
 | Version | Date | Notes |
 |---------|------|-------|
 | `0.5.3` | 2026-05-31 | README rewrite in Codeplane style; package renamed to `@isogonic/codeplane-server-inventory`; npm publish workflow added. |
+| `0.5.2` | 2026-05-30 | CI cleanup; correct publish directory; optimize npm workflow. |
+| `0.5.1` | 2026-05-29 | npm publish fixes; migrate to local git config; unpin @types/node. |
 | `0.5.0` | 2026-05-28 | `ssh_check`, `exec_on`, secrets v2, agent-friendly defaults. |
 
-## Troubleshooting Publish Failures
+## Cache and State Invalidation
+
+This project does not use a long-lived file cache. State is invalidated by
+design through direct disk reads and serialized writes.
+
+- **Inventory reads**: every `list_servers`, `get_server`, `groups`, `tags`,
+  and `validate_inventory` call opens the inventory file fresh from disk.
+- **Secret reads**: every `get_secret`, `list_secrets`, and `list_all_secrets`
+  call decrypts and returns the current value from the encrypted secrets file.
+- **SSH config aliases**: `buildPathsReport` and `validate_inventory` re-parse
+  `~/.ssh/config` on every invocation. No alias cache is held in memory across
+  requests.
+- **Audit log**: append-only. New entries are visible immediately; no buffering.
+
+### Write Serialization
+
+Concurrent writes to the inventory or secrets file are serialized through
+`withInventoryLock`. This prevents race conditions when multiple MCP tool calls
+or CLI commands hit the server at the same time.
+
+### Troubleshooting Publish Failures
 
 If the publish workflow fails after a push to `main`:
 

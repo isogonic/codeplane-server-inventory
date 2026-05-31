@@ -86,6 +86,8 @@ export interface ExecOnOptions {
 }
 
 /** Map an exit code + stderr buffer to a structured outcome. */
+export { buildSshArgv };
+
 export function classifySshFailure(
   exitCode: number | null,
   stderr: string,

@@ -219,3 +219,159 @@ test("update fails on rename collision", async () => {
   assert.throws(() => store.update("a", { name: "b" }), /already taken/);
   await fs.rm(p, { force: true });
 });
+
+test("loadInventory throws on malformed JSON", async () => {
+  const p = tmpFile("bad.json");
+  await fs.writeFile(p, "{ not json", { mode: 0o600 });
+  await assert.rejects(
+    () => loadInventory(p),
+    /not valid JSON/,
+  );
+  await fs.rm(p, { force: true });
+});
+
+test("loadInventory throws on schema validation failure", async () => {
+  const p = tmpFile("schema-bad.json");
+  await fs.writeFile(p, JSON.stringify({ version: 1, servers: [{ name: "", host: "x" }] }), { mode: 0o600 });
+  await assert.rejects(
+    () => loadInventory(p),
+    /failed schema validation/,
+  );
+  await fs.rm(p, { force: true });
+});
+
+test("filterServers returns all when no filters match", () => {
+  const servers = [
+    normalizeServer({ name: "a", host: "x", groups: ["g1"], tags: ["t1"] }),
+  ];
+  const result = filterServers(servers, {});
+  assert.deepEqual(result.map((s) => s.name), ["a"]);
+});
+
+test("filterServers returns empty array when no matches", () => {
+  const servers = [
+    normalizeServer({ name: "a", host: "x", groups: ["g1"], tags: ["t1"] }),
+  ];
+  const result = filterServers(servers, { group: "nonexistent" });
+  assert.deepEqual(result, []);
+});
+
+test("search is case-insensitive", () => {
+  const servers = [
+    normalizeServer({ name: "LP-WEB-1", host: "10.0.0.5", groups: [], tags: [], description: "Primary WEB server" }),
+  ];
+  const lower = filterServers(servers, { search: "web" }).map((s) => s.name);
+  const upper = filterServers(servers, { search: "WEB" }).map((s) => s.name);
+  const mixed = filterServers(servers, { search: "Web" }).map((s) => s.name);
+  assert.deepEqual(lower, ["LP-WEB-1"]);
+  assert.deepEqual(upper, ["LP-WEB-1"]);
+  assert.deepEqual(mixed, ["LP-WEB-1"]);
+});
+
+test("search matches across all text fields", () => {
+  const servers = [
+    normalizeServer({
+      name: "db-1",
+      host: "10.0.0.10",
+      user: "dbadmin",
+      ssh_alias: null,
+      groups: ["databases"],
+      tags: ["postgres"],
+      environment: "production",
+      role: "database",
+      notes: "Main PostgreSQL instance",
+    }),
+  ];
+  assert.deepEqual(filterServers(servers, { search: "dbadmin" }).map((s) => s.name), ["db-1"]);
+  assert.deepEqual(filterServers(servers, { search: "postgres" }).map((s) => s.name), ["db-1"]);
+  assert.deepEqual(filterServers(servers, { search: "production" }).map((s) => s.name), ["db-1"]);
+  assert.deepEqual(filterServers(servers, { search: "Main" }).map((s) => s.name), ["db-1"]);
+});
+
+test("normalizeServer trims whitespace from all fields", () => {
+  const s = normalizeServer({
+    name: "spaced",
+    host: "  h.example  ",
+    user: "  ubuntu  ",
+    ssh_alias: "  my-alias  ",
+    identity_file: "  ~/.ssh/id_rsa  ",
+    jump_host: "  j@b  ",
+    groups: ["  g1  ", "  g1  "],
+    tags: ["  t1  "],
+    description: "  desc  ",
+    environment: "  env  ",
+    role: "  role  ",
+    notes: "  notes  ",
+  });
+  assert.equal(s.name, "spaced");
+  assert.equal(s.host, "h.example");
+  assert.equal(s.user, "ubuntu");
+  assert.equal(s.ssh_alias, "my-alias");
+  assert.equal(s.identity_file, "~/.ssh/id_rsa");
+  assert.equal(s.jump_host, "j@b");
+  assert.equal(s.description, "desc");
+  assert.equal(s.environment, "env");
+  assert.equal(s.role, "role");
+  assert.equal(s.notes, "notes");
+});
+
+test("buildSshCommand omits -i and -p and -J when ssh_alias is set", () => {
+  const s = normalizeServer({
+    name: "x",
+    ssh_alias: "myalias",
+    user: "should-be-ignored",
+    port: 9999,
+    identity_file: "/should-be-ignored/key",
+    jump_host: "should-be-ignored@j",
+    groups: [],
+    tags: [],
+  });
+  const cmd = buildSshCommand(s);
+  assert.equal(cmd, "ssh myalias");
+  assert.ok(!cmd.includes("-i"), "no -i for alias");
+  assert.ok(!cmd.includes("-p"), "no -p for alias");
+  assert.ok(!cmd.includes("-J"), "no -J for alias");
+});
+
+test("buildSshCommand appends extra args verbatim", () => {
+  const s = normalizeServer({
+    name: "x",
+    host: "x.example",
+    user: "u",
+    groups: [],
+    tags: [],
+  });
+  const cmd = buildSshCommand(s, ["-v", "-o", "StrictHostKeyChecking=no"]);
+  assert.equal(cmd, "ssh -v -o StrictHostKeyChecking=no u@x.example");
+});
+
+test("buildSshTarget returns ssh_alias when set", () => {
+  const s = normalizeServer({
+    name: "x",
+    ssh_alias: "myalias",
+    groups: [],
+    tags: [],
+  });
+  assert.equal(buildSshTarget(s), "myalias");
+});
+
+test("buildSshTarget falls back to user@host when no alias", () => {
+  const s = normalizeServer({
+    name: "x",
+    host: "h.example",
+    user: "ubuntu",
+    groups: [],
+    tags: [],
+  });
+  assert.equal(buildSshTarget(s), "ubuntu@h.example");
+});
+
+test("buildSshTarget falls back to host-only when no user", () => {
+  const s = normalizeServer({
+    name: "x",
+    host: "h.example",
+    groups: [],
+    tags: [],
+  });
+  assert.equal(buildSshTarget(s), "h.example");
+});

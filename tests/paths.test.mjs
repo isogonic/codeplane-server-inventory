@@ -112,3 +112,113 @@ test("buildPathsReport warns about world-readable identity files", async () => {
   assert.ok(entry?.warning?.includes("world-readable"), "warns about chmod");
   await fs.rm(keyFile, { force: true });
 });
+
+test("expandHome returns absolute path for bare ~", () => {
+  assert.equal(expandHome("~"), os.homedir());
+});
+
+test("expandHome leaves relative paths untouched", () => {
+  assert.equal(expandHome("relative/path"), "relative/path");
+});
+
+test("buildPathsReport lists no identity files when none referenced", async () => {
+  const inv = tmpFile("p-inv3.json");
+  await fs.writeFile(inv, "{}", { mode: 0o600 });
+
+  const servers = [
+    normalizeServer({
+      name: "no-key",
+      ssh_alias: "alias-only",
+      groups: [],
+      tags: [],
+    }),
+  ];
+  const report = await buildPathsReport({
+    servers,
+    inventoryPath: inv,
+    secretsPath: tmpFile("p-sec3.enc"),
+    secretsBackend: "test",
+    secretsMasterKey: "test",
+    auditLogPath: tmpFile("p-aud3.log"),
+    secretsByServer: {},
+  });
+  assert.deepEqual(report.identity_files, []);
+  assert.deepEqual(report.ssh_aliases, [
+    { alias: "alias-only", defined_in_ssh_config: false, used_by: ["no-key"] },
+  ]);
+
+  await fs.rm(inv, { force: true });
+});
+
+test("buildPathsReport marks missing inventory file correctly", async () => {
+  const inv = tmpFile("p-inv4-missing.json");
+  await fs.rm(inv, { force: true });
+
+  const report = await buildPathsReport({
+    servers: [],
+    inventoryPath: inv,
+    secretsPath: tmpFile("p-sec4.enc"),
+    secretsBackend: "test",
+    secretsMasterKey: "test",
+    auditLogPath: tmpFile("p-aud4.log"),
+    secretsByServer: {},
+  });
+  assert.equal(report.inventory.exists, false);
+  assert.equal(report.inventory.path, inv);
+});
+
+test("buildPathsReport includes per_server secret_keys", async () => {
+  const inv = tmpFile("p-inv5.json");
+  await fs.writeFile(inv, "{}", { mode: 0o600 });
+
+  const servers = [
+    normalizeServer({
+      name: "srv-with-secrets",
+      host: "1.2.3.4",
+      groups: [],
+      tags: [],
+    }),
+  ];
+  const report = await buildPathsReport({
+    servers,
+    inventoryPath: inv,
+    secretsPath: tmpFile("p-sec5.enc"),
+    secretsBackend: "env",
+    secretsMasterKey: "scrypt",
+    auditLogPath: tmpFile("p-aud5.log"),
+    secretsByServer: { "srv-with-secrets": ["password", "api_token"] },
+  });
+  const ps = report.per_server.find((p) => p.name === "srv-with-secrets");
+  assert.ok(ps);
+  assert.deepEqual(ps.secret_keys, ["password", "api_token"]);
+
+  await fs.rm(inv, { force: true });
+});
+
+test("buildPathsReport populates ssh_target for alias servers", async () => {
+  const inv = tmpFile("p-inv6.json");
+  await fs.writeFile(inv, "{}", { mode: 0o600 });
+
+  const servers = [
+    normalizeServer({
+      name: "alias-server",
+      ssh_alias: "my-prod-db",
+      groups: [],
+      tags: [],
+    }),
+  ];
+  const report = await buildPathsReport({
+    servers,
+    inventoryPath: inv,
+    secretsPath: tmpFile("p-sec6.enc"),
+    secretsBackend: "test",
+    secretsMasterKey: "test",
+    auditLogPath: tmpFile("p-aud6.log"),
+    secretsByServer: {},
+  });
+  const ps = report.per_server.find((p) => p.name === "alias-server");
+  assert.equal(ps.ssh_target, "my-prod-db");
+  assert.equal(ps.ssh_alias, "my-prod-db");
+
+  await fs.rm(inv, { force: true });
+});

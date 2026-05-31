@@ -18,6 +18,8 @@ jobs:
         node: [20, 22]
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TEAM_PAT || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
