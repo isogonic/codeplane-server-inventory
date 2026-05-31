@@ -7,7 +7,7 @@
   </p>
 
   <p>
-    <a href="https://codeplane-server-inventory.js.org">Package</a> &nbsp;·&nbsp;
+    <a href="https://npmjs.com/package/@isogonic/codeplane-server-inventory">Package</a> &nbsp;·&nbsp;
     <a href="../">Docs</a> &nbsp;·&nbsp;
     <a href="https://github.com/isogonic/codeplane-server-inventory">GitHub</a>
   </p>
@@ -31,8 +31,8 @@ The current version lives in [`package.json`](../package.json) under the `versio
 
 The [`publish.yml`](../.github/workflows/publish.yml) workflow runs automatically on:
 
-1. **Push to `main`** — every commit that lands on `main` triggers a publish attempt.
-2. **Manual `workflow_dispatch`** — you can trigger a publish from the GitHub UI without a new commit.
+1. **GitHub release published** — publishing a release on GitHub triggers `publish.yml` to build and publish the matching version from `package.json` to npm.
+2. **Manual `workflow_dispatch`** — you can trigger a publish from the GitHub UI without a new release.
 
 The workflow does **not** require a git tag. It reads the version directly from `package.json` and publishes that exact version to npm.
 

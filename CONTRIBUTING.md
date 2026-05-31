@@ -11,7 +11,7 @@ src/
   paths.ts     paths_report builder
   audit.ts    append-only audit log + withAudit wrapper
   index.ts     stdio MCP server, registers every tool
-  cli.ts       standalone `server-inv` CLI
+  ssh.ts       ssh_check / exec_on implementation
 tests/
   *.test.mjs  node:test unit suites
 scripts/
@@ -39,9 +39,7 @@ npm run dev         # run the MCP server directly via tsx
    path.
 5. Add a unit test under `tests/` if the new behaviour has any logic
    beyond "call the store and return".
-6. Mirror the tool as a `server-inv` subcommand in `src/cli.ts` if it
-   makes sense from the shell.
-7. Update the tool table in `README.md` and add a recipe to
+6. Update the tool table in `README.md` and add a recipe to
    `docs/COOKBOOK.md` if there's a notable workflow.
 
 ## Tone for commit messages

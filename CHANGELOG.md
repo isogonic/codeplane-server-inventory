@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.6] - 2026-05-31
+### Fixed
+- Fixed `PKG_VERSION` constant in `src/index.ts` to match `package.json` version
+- Fixed broken Package URL in `docs/Versioning.md`
+- Fixed publish trigger documentation to match actual `publish.yml` behavior (GitHub release only)
+- Removed stale `src/cli.ts` references from `CONTRIBUTING.md`
+
 ## [0.5.5] - 2026-05-31
 ### Added
 - Cross-platform support documented for macOS, Linux, and Windows

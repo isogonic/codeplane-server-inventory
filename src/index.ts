@@ -33,7 +33,7 @@ import path from "node:path";
 import type { Server } from "./schema.js";
 
 const PKG_NAME = "server-inventory-mcp";
-const PKG_VERSION = "0.5.0";
+const PKG_VERSION = "0.5.6";
 
 const secrets = defaultSecretsStore();
 
