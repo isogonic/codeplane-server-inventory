@@ -581,8 +581,8 @@ function assertId(value: string, fieldName: string): void {
 
 /**
  * Parse a relative duration like `30d`, `12h`, `45m`, `2w` into an ISO
- * timestamp `now + duration`. Used by the CLI and MCP tools to accept
- * `--expires-in 30d` style input without forcing the caller to compute the
+ * timestamp `now + duration`. Used by MCP tools to accept
+ * `expires_in: "30d"` style input without forcing the caller to compute the
  * absolute timestamp.
  */
 export function parseExpiresIn(input: string, now: Date = new Date()): string {

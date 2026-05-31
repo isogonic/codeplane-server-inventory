@@ -10,7 +10,7 @@ unit tests, and a single smoke test exercises the full MCP server lifecycle.
 - **Location**: `tests/*.test.mjs`
 - **Runner**: Node's built-in test runner (`node --test`)
 - **Command**: `npm run test:unit`
-- **Coverage**: audit, CLI, inventory, paths, schema, secrets, SSH
+- **Coverage**: audit, inventory, paths, schema, secrets, SSH
 
 ### Smoke Test
 

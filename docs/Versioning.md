@@ -21,8 +21,8 @@ This package follows [Semantic Versioning](https://semver.org/):
 
 | Increment | When |
 |-----------|------|
-| `MAJOR` | Breaking changes to the MCP tool surface, CLI interface, file format, or secrets encryption scheme. |
-| `MINOR` | New tools, new CLI commands, new environment variables, or backward-compatible enhancements. |
+| `MAJOR` | Breaking changes to the MCP tool surface, file format, or secrets encryption scheme. |
+| `MINOR` | New tools, new environment variables, or backward-compatible enhancements. |
 | `PATCH` | Bug fixes, documentation updates, internal refactors, or CI/workflow changes that do not affect users. |
 
 The current version lives in [`package.json`](../package.json) under the `version` field. There is no separate version file or lockfile-driven version.
@@ -46,9 +46,9 @@ Before pushing a version bump to `main`:
   ```bash
   npm run build && npm test
   ```
-- [ ] Verify the CLI still works:
+      - [ ] Verify the server starts cleanly and smoke tests pass:
   ```bash
-  node dist/cli.js info
+  npm test
   ```
 - [ ] If you added new tools or changed tool names, update [`README.md`](../README.md) tool tables and MCP config examples.
 - [ ] If you changed the secrets scheme or file format, update the **Security model** section in the README.
@@ -100,7 +100,7 @@ Two workflows run on every push to `main`:
 | Build | `npm ci` then `npm run build` |
 | Unit tests | `npm run test:unit` (34 Node test suites) |
 | Smoke test | `npm run smoke` (full MCP server lifecycle) |
-| CLI smoke | Adds a server, sets a secret, reads it back, lists groups, removes it |
+| Smoke test | Full MCP server lifecycle via `npm run smoke` |
 
 Matrix: `ubuntu-latest` / `macos-latest` × Node `20` / `22`.
 
@@ -142,7 +142,7 @@ design through direct disk reads and serialized writes.
 
 Concurrent writes to the inventory or secrets file are serialized through
 `withInventoryLock`. This prevents race conditions when multiple MCP tool calls
-or CLI commands hit the server at the same time.
+or concurrent tool calls hit the server at the same time.
 
 ### Troubleshooting Publish Failures
 

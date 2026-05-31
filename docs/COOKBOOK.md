@@ -11,19 +11,6 @@ agent has access to the tools.
 You have a `~/.ssh/config` with five named Hosts and want the agent to
 "know" all of them.
 
-**From the shell (fastest):**
-
-```bash
-for h in lp-web-1 lp-web-2 lp-db-1 lp-staging-1 lp-bastion; do
-  server-inv add "$h" --alias "$h" --group logicplanes
-done
-server-inv update lp-web-1     --tag web --env production --role web
-server-inv update lp-web-2     --tag web --env production --role web
-server-inv update lp-db-1      --tag db  --env production --role db
-server-inv update lp-staging-1 --tag web --env staging    --role web
-server-inv update lp-bastion   --tag bastion --env production --role bastion
-```
-
 **From the agent:**
 
 > "Add `lp-web-1`, `lp-web-2`, `lp-db-1`, `lp-staging-1`, `lp-bastion` to
@@ -38,17 +25,13 @@ The agent will fire `add_server` five times via the MCP.
 
 ## 2. Store sudo passwords for a whole group
 
-```bash
-# read each password interactively, never appearing in shell history
-for h in lp-web-1 lp-web-2 lp-app-1; do
-  read -s -p "sudo password for $h: " pw; echo
-  printf '%s' "$pw" | server-inv secret set "$h" sudo_password
-done
-```
+From the agent:
+
+> "Store the sudo password `hunter2` for lp-web-1, lp-web-2, and lp-app-1
+> under the key `sudo_password`."
 
 The values land in `~/.config/server-inventory/secrets.enc`, encrypted with
-the master key your keychain holds. Read them back with `server-inv secret
-get $name sudo_password` or, from the agent, `get_secret`.
+the master key your keychain holds. Read them back via `get_secret`.
 
 ---
 
@@ -72,9 +55,9 @@ transcript.
 
 ## 4. Pre-flight: is my inventory healthy?
 
-```bash
-server-inv validate
-```
+From the agent:
+
+> "Run validate_inventory and tell me if anything is wrong."
 
 ```json
 {
@@ -90,18 +73,15 @@ server-inv validate
 ```
 
 `ok: false` means at least one error — fix the missing key file before
-asking the agent to do anything. The agent can run the same check via
-`validate_inventory`.
+asking the agent to do anything.
 
 ---
 
 ## 5. Where exactly does the agent look for my password to lp-db-1?
 
-```
-agent: paths_report
-```
+From the agent:
 
-You'll get something like:
+> "Run paths_report and show me where everything lives."
 
 ```json
 {
@@ -132,48 +112,35 @@ Every file the agent could touch, in one shot.
 
 ## 6. Renaming a server keeps its secrets
 
-```bash
-server-inv update lp-web-1 --rename-to lp-web-primary
-server-inv secret ls lp-web-primary
-# -> { "server": "lp-web-primary", "keys": ["password","sudo_password"] }
-```
+From the agent:
 
-(The secrets file is rewritten with the new name — old name is gone.)
+> "Rename lp-web-1 to lp-web-primary."
+
+The agent will call `update_server` with `rename_to`. Secrets are migrated
+automatically. Verify with `get_server { name: "lp-web-primary" }` — the
+`secret_keys` list will still show the old keys.
 
 ---
 
 ## 7. Removing a server drops its secrets too
 
-```bash
-server-inv rm lp-staging-1
-# -> { "removed": "lp-staging-1", "removed_secret_count": 2 }
-```
+From the agent:
 
-No orphaned credentials, no manual cleanup.
+> "Remove lp-staging-1 from the inventory."
+
+The agent calls `remove_server`. The response includes
+`removed_secret_count` so you can confirm the cascade.
 
 ---
 
 ## 8. Auditing what the agent has changed today
 
-```bash
-server-inv audit --limit 100
-```
+From the agent:
 
-```json
-{
-  "path": "/Users/me/.config/server-inventory/audit.log",
-  "total_lines": 142,
-  "entries": [
-    {"ts":"...","tool":"add_server","server":"lp-web-1","ok":true},
-    {"ts":"...","tool":"set_secret","server":"lp-web-1","key":"password","ok":true},
-    {"ts":"...","tool":"update_server","server":"lp-web-1","ok":true},
-    ...
-  ]
-}
-```
+> "Show me the last 50 audit log entries."
 
-Tool names prefixed with `cli:` came from the terminal; bare names came
-from the agent over MCP.
+Tool names come from the agent over MCP (`add_server`, `set_secret`, etc.)
+or from the terminal if you used one (e.g. `cli:add_server` on older versions).
 
 ---
 
@@ -181,17 +148,12 @@ from the agent over MCP.
 
 Useful when migrating the secrets file to a new machine.
 
-1. On the source machine, decrypt and re-encrypt with a passphrase:
-   ```bash
-   # On source: read out every value as JSON
-   server-inv secret ls --json > /tmp/secret-keys.json
-   # (For each server+key, server-inv secret get $s $k → save the
-   #  value to a plaintext side file, then re-import on the new
-   #  machine.)
-   ```
-2. On the destination machine, set `SERVER_INVENTORY_PASSPHRASE` in the
-   MCP client's environment block, then `server-inv secret set` each
-   value back.
+1. On the source machine, export and re-import via the agent:
+   - `list_all_secrets` to discover every server/key.
+   - For each: `get_secret { server, key }` → save value.
+   - On destination machine: `set_secret { server, key, value }`.
+2. Set `SERVER_INVENTORY_PASSPHRASE` in the MCP client's environment block
+   on the destination machine.
 
 The two backends produce different ciphertexts even for the same value,
 so the secrets file is not directly portable without a re-encrypt step.

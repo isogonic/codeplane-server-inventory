@@ -3,7 +3,7 @@
   <h1>Codeplane Server Inventory</h1>
 
   <p>
-    <strong>MCP server for <a href="https://codeplane.cc">Codeplane</a> that keeps an inventory of SSH-reachable servers (grouped + tagged) with an encrypted secrets store so an agent can answer "audit all <group> servers" without you having to tell it where the servers are or how to log in.</strong>
+    <strong>MCP server for <a href="https://codeplane.cc">Codeplane</a> that keeps an inventory of SSH-reachable servers (grouped + tagged) with an encrypted secrets store so an agent can answer "audit all <group> servers" without manual credential input.</strong>
   </p>
 
   <p>
@@ -36,7 +36,7 @@ Everything writable lives in your Codeplane data directory:
 └── audit.log      append-only JSON-lines, every mutation
 ```
 
-Use the `paths_report` tool (or `server-inv paths`) to get every file location, including resolved identity file paths and ssh aliases that don't resolve in your `~/.ssh/config`.
+Use the `paths_report` tool to get every file location, including resolved identity file paths and ssh aliases that don't resolve in your `~/.ssh/config`.
 
 ## Install
 
@@ -50,14 +50,22 @@ Or install locally in a project:
 npm install @isogonic/codeplane-server-inventory
 ```
 
-Verify the CLI:
-
-```bash
-server-inv --help
-server-inv info
-```
-
 ## Add to Codeplane
+
+This server runs as a **local stdio MCP server**. There is no separate CLI or network service.
+
+### Via Codeplane UI
+
+1. Open **Codeplane** → **Settings** → **MCP Servers** (or **Connected Apps** / **Plugins**, depending on your UI version).
+2. Click **Add Server** / **Connect**.
+3. Choose **Local command** (or **Custom command**).
+4. Fill in:
+   - **Name**: `server-inventory`
+   - **Command**: `npx -y @isogonic/codeplane-server-inventory`
+   - **Environment**: add `SERVER_INVENTORY_ALLOW_EXEC` = `0`
+5. Save / Connect. Codeplane will spawn the server on demand.
+
+### Via `codeplane.jsonc`
 
 Add this to your `codeplane.jsonc` (or `codeplane.json`):
 
@@ -81,9 +89,7 @@ Add this to your `codeplane.jsonc` (or `codeplane.json`):
 }
 ```
 
-Then restart Codeplane. The server registers these tools under the `server-inventory` namespace.
-
-If you installed globally and want to use the global binary instead of `npx`:
+If you installed globally:
 
 ```jsonc
 {
@@ -128,7 +134,6 @@ MCP tool IDs are generated from the server name and tool name. Keep the server n
 - **SSH reachability probing** — `ssh_check` classifies outcomes: `ok` / `auth_failed` / `dns_failure` / `refused` / `timeout` / `host_key_mismatch` / `unreachable` / `unknown`.
 - **Remote command execution** — `exec_on` runs commands across a name / group / tag. **Opt-in only**: refuses unless `SERVER_INVENTORY_ALLOW_EXEC=1`.
 - **Audit trail** — append-only JSON-lines log records every mutation and `exec_on` call (server + exit code only, never command body or output).
-- **CLI** — `server-inv` exposes every tool from your shell for operator use.
 
 ## File Locations
 
@@ -164,44 +169,6 @@ All files except `~/.ssh/config` are created with mode `0600`.
 | `audit_tail` | Last N entries from the audit log. |
 | `ssh_check` | Probe reachability per host with structured outcomes. Bounded parallelism, ConnectTimeout, hard kill timer. |
 | `exec_on` | Run a non-interactive command across name / group / tag. **Opt-in**: refuses unless `SERVER_INVENTORY_ALLOW_EXEC=1`. **Defaults to `dry_run: true`** — first call returns reachability + the plan; pass `dry_run: false` to actually run. Output truncated; audit log records server + exit code only. |
-
-## The CLI
-
-```bash
-server-inv ls                          # list servers
-server-inv get lp-web-1                # detail + ssh command + secret keys
-server-inv groups                      # all groups with member names
-server-inv targets --group logicplanes # ssh commands, one per line, ready to pipe
-
-server-inv add lp-web-1 --host 10.0.0.5 --user ubuntu \
-  --group logicplanes --group production --tag web --tag nginx \
-  --env production --role web --desc "primary public web"
-
-server-inv update lp-web-1 --port 2222 --tag tls
-server-inv update lp-web-1 --rename-to lp-web-primary
-
-echo -n 'hunter2' | server-inv secret set lp-web-1 password
-echo -n 'tok-abc' | server-inv secret set lp-web-1 api_token --expires-in 30d
-server-inv secret get lp-web-1 password   # prints value to stdout
-server-inv secret ls                       # all servers' keys
-server-inv secret ls lp-web-1 --meta       # keys + created_at/updated_at/expires_at
-server-inv secret rm lp-web-1 password
-
-server-inv ssh-check --group logicplanes   # probe every host, non-zero exit if any down
-server-inv ssh-check --all --timeout-sec 3
-SERVER_INVENTORY_ALLOW_EXEC=1 \
-  server-inv exec --group logicplanes -- "uptime && uname -r"   # dry-run by default
-SERVER_INVENTORY_ALLOW_EXEC=1 \
-  server-inv exec --group logicplanes --run -- "uptime && uname -r"   # actually fire
-
-server-inv paths                       # paths_report as JSON
-server-inv validate                    # validate_inventory as JSON
-server-inv audit --limit 20            # tail of the audit log
-
-server-inv rm lp-web-1                 # cascades to delete secrets
-```
-
-The CLI writes to the same files as the MCP server and logs to the same audit log (with `cli:` prefixed tool names) so an operator can tell a manual change from an agent-driven one.
 
 ## Example: audit all logicplanes servers
 
@@ -264,12 +231,21 @@ npm run dev       # run src/index.ts directly via tsx (no build)
 
 Set `SERVER_INVENTORY_TRACE=1` for stderr breadcrumbs from the lock / load / save paths when debugging.
 
+## Cross-Platform Support
+
+Works on:
+
+- **macOS** (uses Keychain for master key by default)
+- **Linux** (uses env-passphrase fallback)
+- **Windows** (uses env-passphrase fallback; file permissions are ignored by the OS)
+
+All files use Node.js built-ins (`path`, `fs`, `os`, `crypto`) and are tested on `ubuntu-latest` and `macos-latest` with Node `20` and `22`.
+
 ## Repository Layout
 
 ```text
 src/
   index.ts        MCP server entry point (stdio)
-  cli.ts          server-inv CLI
   inventory.ts    inventory store + SSH resolution
   secrets.ts      encrypted secrets store
   audit.ts        append-only audit log

@@ -33,7 +33,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 ## Pull Request Checklist
 
 - [ ] `npm run build` passes with no TypeScript errors
-- [ ] `npm run test:unit` passes (100+ tests)
+- [ ] `npm run test:unit` passes (87+ tests)
 - [ ] `npm run smoke` passes (full MCP server lifecycle)
 - [ ] New tools or flags are documented in `README.md` and `docs/INTERACTIONS.md`
 - [ ] `CHANGELOG.md` contains an entry for user-facing changes

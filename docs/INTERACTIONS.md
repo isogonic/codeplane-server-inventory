@@ -1,8 +1,8 @@
 # Interactions
 
 This document describes how users and agents interact with
-`codeplane-server-inventory`. It covers the MCP tool surface, the standalone
-CLI, and the key environment variables that control behavior.
+`codeplane-server-inventory`. It covers the MCP tool surface and the key
+environment variables that control behavior.
 
 ## MCP Tool Surface
 
@@ -31,7 +31,6 @@ When loaded as an MCP server, the following tools are exposed:
 - `ssh_check` — probe one or many servers for reachability + auth
 - `ssh_target_for` — resolve servers to SSH targets or commands
 - `exec_on` — run a command across matched servers (disabled by default)
-- `exec` — alias of `exec_on` that supports `--run` for dry-run preview
 
 ### Audit
 
@@ -40,21 +39,6 @@ When loaded as an MCP server, the following tools are exposed:
 ### Validation
 
 - `validate_inventory` — report missing fields, missing keys, expired secrets
-
-## CLI
-
-The standalone CLI mirrors MCP capabilities without requiring an MCP client:
-
-```bash
-server-inv ls --group logicplanes
-server-inv get web-1
-server-inv add web-2 --host 10.0.0.5 --user ubuntu --group web
-server-inv secret set web-2 db_password
-server-inv secret get web-2 db_password
-server-inv audit --limit 20
-server-inv validate
-server-inv ssh-check --group web --timeout-sec 5
-```
 
 ## Environment Variables
 
