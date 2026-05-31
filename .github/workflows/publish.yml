@@ -19,7 +19,6 @@ jobs:
           cache: npm
       - run: npm config set registry https://registry.npmjs.org/
       - run: npm config set //registry.npmjs.org/:_authToken '${{ secrets.NPM_TOKEN }}'
-      - run: npm whoami
       - run: npm ci
       - run: npm run build
       - run: npm publish --access public
