@@ -118,6 +118,7 @@ The publish workflow does **not** require the repo to be public. It uses the man
 
 | Version | Date | Notes |
 |---------|------|-------|
+| `0.5.6` | 2026-05-31 | Align PKG_VERSION with package.json; fix docs URLs and publish trigger docs; remove stale CLI references. |
 | `0.5.5` | 2026-05-31 | CLI removed; publish on GitHub release; Windows support documented; LICENSE attribution added. |
 | `0.5.4` | 2026-05-31 | CI operationalization: changelog gate, TEAM_PAT support, docs expansion. |
 | `0.5.3` | 2026-05-31 | README rewrite in Codeplane style; package renamed to `@isogonic/codeplane-server-inventory`; npm publish workflow added. |
